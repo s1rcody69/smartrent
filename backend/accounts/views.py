@@ -1,3 +1,122 @@
 from django.shortcuts import render
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate, get_user_model
 
-# Create your views here.
+from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+
+# Always use get_user_model() to reference the custom user model
+User = get_user_model()
+
+
+class RegisterView(APIView):
+    # AllowAny — registration must be accessible without a token
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Pass incoming request data into the serializer for validation
+        serializer = RegisterSerializer(data=request.data)
+
+        if serializer.is_valid():
+            # Save the user — triggers the create() method in the serializer
+            user = serializer.save()
+
+            # Generate JWT tokens immediately after registration
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'message': 'Account created successfully.',
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        # Return validation errors if serializer is invalid
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginView(APIView):
+    # AllowAny — login must be accessible without a token
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+
+        if serializer.is_valid():
+            email = serializer.validated_data['email'].lower()
+            password = serializer.validated_data['password']
+
+            # authenticate() checks the credentials against the database
+            # It returns None if credentials are invalid
+            user = authenticate(request, username=email, password=password)
+
+            if user is None:
+                return Response(
+                    {'error': 'Invalid email or password.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            if not user.is_active:
+                return Response(
+                    {'error': 'This account has been deactivated.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Generate fresh tokens on every successful login
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'message': 'Login successful.',
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutView(APIView):
+    # IsAuthenticated — only logged-in users can logout
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Get the refresh token from the request body
+            refresh_token = request.data.get('refresh')
+
+            if not refresh_token:
+                return Response(
+                    {'error': 'Refresh token is required.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Blacklist the token — it can never be used again
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(
+                {'message': 'Logged out successfully.'},
+                status=status.HTTP_200_OK
+            )
+        except Exception:
+            return Response(
+                {'error': 'Invalid token.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class MeView(APIView):
+    # IsAuthenticated — only logged-in users can view their own profile
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # request.user is automatically set by JWT authentication middleware
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
