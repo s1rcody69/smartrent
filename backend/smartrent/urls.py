@@ -22,4 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Authentication endpoints
     path('api/auth/', include ('accounts.urls')),
+     # Properties and units endpoints
+    path('api/', include('properties.urls')),
 ]
