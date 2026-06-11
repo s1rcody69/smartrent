@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from .models import User, LandlordProfile, TenantProfile    
 
 
 # @admin.register decorator registers the User model with the admin site
@@ -41,3 +41,32 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'role', 'password1', 'password2'),
         }),
     )
+
+# Register the landlord and tenant profiles with the admin site
+
+@admin.register(LandlordProfile)
+class LandlordProfileAdmin(admin.ModelAdmin):
+
+    # Columns visible in the landlord profile list view
+    list_display = ['user', 'business_name', 'created_at']
+
+    # Fields the search bar will query against
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'business_name']
+
+    # These fields cannot be edited through the admin panel
+    readonly_fields = ['created_at', 'updated_at']
+
+@admin.register(TenantProfile)
+class TenantProfileAdmin(admin.ModelAdmin):
+
+    # Columns visible in the tenant profile list view
+    list_display = ['user', 'national_id', 'occupation', 'employment_status', 'created_at']
+
+    # Sidebar filters
+    list_filter = ['employment_status']
+
+    # Fields the search bar will query against
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'national_id']
+
+    # These fields cannot be edited through the admin panel
+    readonly_fields = ['created_at', 'updated_at']

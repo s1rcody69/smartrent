@@ -184,12 +184,7 @@ class TenantProfile(models.Model):
         blank=True,
         null=True
     )
-    monthly_income = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        blank=True,
-        null=True
-    )
+    
 
     # Emergency contact — standard requirement for rental agreements in Kenya
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
