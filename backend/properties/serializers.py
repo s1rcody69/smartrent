@@ -3,8 +3,11 @@ from .models import Property, Unit
 
 
 class UnitSerializer(serializers.ModelSerializer):
-    # Read-only field that returns the human-readable status label
+    # Read-only field that returns the human-readable status label e.g. "Vacant"
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    # Read-only field that returns the human-readable unit type label e.g. "Villa"
+    unit_type_display = serializers.CharField(source='get_unit_type_display', read_only=True)
 
     class Meta:
         model = Unit
@@ -12,6 +15,8 @@ class UnitSerializer(serializers.ModelSerializer):
             'id',
             'property',
             'unit_number',
+            'unit_type',
+            'unit_type_display',
             'floor',
             'bedrooms',
             'bathrooms',
@@ -27,7 +32,7 @@ class UnitSerializer(serializers.ModelSerializer):
 
 
 class PropertySerializer(serializers.ModelSerializer):
-    # Nested serializer — returns all units when viewing a property
+    # Nested serializer — returns all units when viewing a property detail
     # many=True because one property has many units
     # read_only=True because units are managed through their own endpoints
     units = UnitSerializer(many=True, read_only=True)
@@ -38,12 +43,20 @@ class PropertySerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # Read-only field that returns the human-readable property type label
+    property_type_display = serializers.CharField(
+        source='get_property_type_display',
+        read_only=True
+    )
+
     class Meta:
         model = Property
         fields = [
             'id',
             'landlord',
             'landlord_name',
+            'property_type',
+            'property_type_display',
             'name',
             'address',
             'city',
@@ -66,12 +79,20 @@ class PropertyListSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # Read-only field that returns the human-readable property type label
+    property_type_display = serializers.CharField(
+        source='get_property_type_display',
+        read_only=True
+    )
+
     class Meta:
         model = Property
         fields = [
             'id',
             'landlord',
             'landlord_name',
+            'property_type',
+            'property_type_display',
             'name',
             'address',
             'city',
@@ -80,4 +101,4 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'is_active',
             'created_at',
         ]
-        read_only_fields = ['id', 'total_units', 'created_at']
+        read_only_fields = ['id', 'landlord', 'total_units', 'created_at']

@@ -5,6 +5,17 @@ from accounts.models import LandlordProfile
 
 class Property(models.Model):
 
+    PROPERTY_TYPE_CHOICES = (
+        # Multi-unit building where tenants rent individual units
+        ('apartment', 'Apartment'),
+        # Standalone house — can contain villas or townhouses
+        ('house', 'House'),
+        # Single room self-contained unit
+        ('bedsitter', 'Bedsitter'),
+        # Commercial space — can contain offices or shops
+        ('commercial', 'Commercial'),
+    )
+
     # Property belongs to a landlord profile, not directly to a user
     # on_delete=CASCADE means if the landlord is deleted, their properties are deleted too
     landlord = models.ForeignKey(
@@ -15,6 +26,13 @@ class Property(models.Model):
 
     # UUID primary key for security — same reasoning as the User model
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Type of property — determines how units are structured
+    property_type = models.CharField(
+        max_length=20,
+        choices=PROPERTY_TYPE_CHOICES,
+        default='apartment'
+    )
 
     name = models.CharField(max_length=255)
     address = models.TextField()
@@ -56,6 +74,19 @@ class Unit(models.Model):
         ('maintenance', 'Under Maintenance'),
     )
 
+    UNIT_TYPE_CHOICES = (
+        # Apartment units — numbered rooms inside an apartment building
+        ('apartment_unit', 'Apartment Unit'),
+        # House subtypes — individual houses inside a property
+        ('villa', 'Villa'),
+        ('townhouse', 'Townhouse'),
+        # Bedsitter — single room self-contained
+        ('bedsitter', 'Bedsitter'),
+        # Commercial subtypes
+        ('office', 'Office'),
+        ('shop', 'Shop'),
+    )
+
     # Unit belongs to one property — if property is deleted, units are deleted too
     property = models.ForeignKey(
         Property,
@@ -67,6 +98,14 @@ class Unit(models.Model):
 
     # Unit number is the identifier within the property e.g. A1, B3, 101
     unit_number = models.CharField(max_length=20)
+
+    # Specific type of unit within the property
+    unit_type = models.CharField(
+        max_length=20,
+        choices=UNIT_TYPE_CHOICES,
+        blank=True,
+        null=True
+    )
 
     floor = models.CharField(max_length=20, blank=True, null=True)
     bedrooms = models.PositiveIntegerField(default=1)
