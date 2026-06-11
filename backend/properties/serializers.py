@@ -55,7 +55,7 @@ class PropertySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'total_units', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'landlord', 'total_units', 'created_at', 'updated_at']
 
 
 class PropertyListSerializer(serializers.ModelSerializer):
