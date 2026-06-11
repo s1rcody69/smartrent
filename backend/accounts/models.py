@@ -118,4 +118,90 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+
+class LandlordProfile(models.Model):
+    # One-to-one link to User — one user can have one landlord profile
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='landlord_profile'
+    )
+
+    # Business details specific to landlords
+    business_name = models.CharField(max_length=255, blank=True, null=True)
+    business_registration_number = models.CharField(max_length=100, blank=True, null=True)
+
+    # Cloudinary will store the URL of the uploaded profile photo
+    profile_photo = models.ImageField(
+        upload_to='landlord_photos/',
+        blank=True,
+        null=True
+    )
+
+    bio = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'landlord_profiles'
+
+    def __str__(self):
+        return f'LandlordProfile — {self.user.full_name}'
+
+
+class TenantProfile(models.Model):
+    # Choices for employment status
+    EMPLOYMENT_STATUS_CHOICES = (
+        ('employed', 'Employed'),
+        ('self_employed', 'Self Employed'),
+        ('student', 'Student'),
+        ('unemployed', 'Unemployed'),
+        ('retired', 'Retired'),
+    )
+
+    # One-to-one link to User — one user can have one tenant profile
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='tenant_profile'
+    )
+
+    # Identity and personal details
+    national_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
+
+    profile_photo = models.ImageField(
+        upload_to='tenant_photos/',
+        blank=True,
+        null=True
+    )
+
+    # Occupation details — important for tenant vetting in Kenya
+    occupation = models.CharField(max_length=255, blank=True, null=True)
+    employer_name = models.CharField(max_length=255, blank=True, null=True)
+    employment_status = models.CharField(
+        max_length=20,
+        choices=EMPLOYMENT_STATUS_CHOICES,
+        blank=True,
+        null=True
+    )
+    monthly_income = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    # Emergency contact — standard requirement for rental agreements in Kenya
+    emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    emergency_contact_relationship = models.CharField(max_length=50, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tenant_profiles'
+
+    def __str__(self):
+        return f'TenantProfile — {self.user.full_name}'
     
