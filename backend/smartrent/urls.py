@@ -28,4 +28,6 @@ urlpatterns = [
     path('api/', include('leases.urls')),
     # Maintenance requests endpoints
     path('api/', include('maintenance.urls')),
+    # Payments endpoints
+     path('api/', include('payments.urls')),
 ]
