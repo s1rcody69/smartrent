@@ -26,4 +26,6 @@ urlpatterns = [
     path('api/', include('properties.urls')),
     # Leases endpoints
     path('api/', include('leases.urls')),
+    # Maintenance requests endpoints
+    path('api/', include('maintenance.urls')),
 ]
