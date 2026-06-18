@@ -1,4 +1,5 @@
 from rest_framework.views import APIView
+from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -13,7 +14,7 @@ from maintenance.models import MaintenanceRequest
 
 class RevenueReportView(APIView):
     """Total revenue collected, broken down by month."""
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Total revenue from completed payments only
@@ -119,7 +120,7 @@ class OccupancyReportView(APIView):
 
 class PaymentReportView(APIView):
     """Payment history and summary statistics."""
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Payment counts by status
@@ -168,7 +169,7 @@ class PaymentReportView(APIView):
 
 class MaintenanceReportView(APIView):
     """Maintenance request statistics."""
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Counts by status
@@ -207,7 +208,7 @@ class MaintenanceReportView(APIView):
 
 class DashboardSummaryView(APIView):
     """Single endpoint that returns all key metrics for the dashboard."""
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Properties and units

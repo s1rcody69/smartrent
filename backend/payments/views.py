@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -28,7 +28,7 @@ def format_phone(phone):
 class RentInvoiceViewSet(viewsets.ModelViewSet):
     # CRUD for rent invoices
     serializer_class = RentInvoiceSerializer
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'lease', 'invoice_month', 'invoice_year']
     ordering_fields = ['due_date', 'created_at', 'amount']
@@ -41,7 +41,7 @@ class RentInvoiceViewSet(viewsets.ModelViewSet):
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     # Payments are read-only — created through STK Push only
     serializer_class = PaymentSerializer
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'payment_method', 'invoice']
     ordering_fields = ['created_at', 'amount']
