@@ -17,7 +17,7 @@ class RentInvoice(models.Model):
     # Invoice belongs to a lease — one lease can have many invoices (monthly)
     lease = models.ForeignKey(
         Lease,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='invoices'
     )
 
@@ -69,7 +69,7 @@ class Payment(models.Model):
     # Payment is made against a specific invoice
     invoice = models.ForeignKey(
         RentInvoice,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='payments'
     )
 

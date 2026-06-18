@@ -15,17 +15,34 @@ class IsLandlordOrAdmin(permissions.BasePermission):
         # Write access only for landlords and admins
         return request.user.is_authenticated and request.user.role in ['landlord', 'admin']
 
+    #def has_object_permission(self, request, view, obj):
+    #     # Allow read access to all authenticated users
+    #     if request.method in permissions.SAFE_METHODS:
+    #         return request.user.is_authenticated
+    #     # Admins can edit any property
+    #     if request.user.role == 'admin':
+    #         return True
+    #     # Landlords can only edit their own properties
+    #     if request.user.role == 'landlord':
+    #         return obj.landlord.user == request.user
+    #     return False
+
     def has_object_permission(self, request, view, obj):
-        # Allow read access to all authenticated users
-        if request.method in permissions.SAFE_METHODS:
+         # Allow read access to all authenticated users
+          if request.method in permissions.SAFE_METHODS:
             return request.user.is_authenticated
-        # Admins can edit any property
-        if request.user.role == 'admin':
+        # Admins can edit any property or unit
+          if request.user.role == 'admin':
             return True
-        # Landlords can only edit their own properties
-        if request.user.role == 'landlord':
-            return obj.landlord.user == request.user
-        return False
+        # Landlords can only edit things tied to their own properties
+          if request.user.role == 'landlord':
+        # obj is a Property — it has .landlord directly
+           if hasattr(obj, 'landlord'):
+              return obj.landlord.user == request.user
+        # obj is a Unit — reach the landlord through its parent property
+          if hasattr(obj, 'property'):
+            return obj.property.landlord.user == request.user
+          return False
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
