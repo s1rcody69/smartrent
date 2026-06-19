@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import LandlordProfile, TenantProfile
 
 # Always use get_user_model() instead of importing User directly
 # This ensures we always get the active custom user model
@@ -43,6 +44,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         # Use create_user() to ensure password is hashed correctly
         user = User.objects.create_user(**validated_data)
+        
+        # Create the appropriate profile based on the user's role
+        if user.role == 'landlord':
+            LandlordProfile.objects.create(user=user)
+        elif user.role == 'tenant':
+            TenantProfile.objects.create(user=user)
+
         return user
 
 
