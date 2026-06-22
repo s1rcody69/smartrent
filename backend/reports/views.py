@@ -12,9 +12,16 @@ from leases.models import Lease
 from maintenance.models import MaintenanceRequest
 
 
+class IsAdminOrLandlord(permissions.BasePermission):
+    # Reports expose aggregate platform/business data —
+    # tenants have no legitimate reason to see revenue or occupancy totals
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ('admin', 'landlord')
+
+
 class RevenueReportView(APIView):
     """Total revenue collected, broken down by month."""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
         # Total revenue from completed payments only
@@ -69,7 +76,7 @@ class RevenueReportView(APIView):
 
 class OccupancyReportView(APIView):
     """Occupancy rate across all properties."""
-    permission_classes = []
+    permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
         # Total units across all properties
@@ -120,7 +127,7 @@ class OccupancyReportView(APIView):
 
 class PaymentReportView(APIView):
     """Payment history and summary statistics."""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
         # Payment counts by status
@@ -169,7 +176,7 @@ class PaymentReportView(APIView):
 
 class MaintenanceReportView(APIView):
     """Maintenance request statistics."""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
         # Counts by status
@@ -208,7 +215,7 @@ class MaintenanceReportView(APIView):
 
 class DashboardSummaryView(APIView):
     """Single endpoint that returns all key metrics for the dashboard."""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
         # Properties and units

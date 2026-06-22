@@ -16,7 +16,7 @@ from .mpesa import initiate_stk_push
 
 def format_phone(phone):
     """Normalize any common Kenyan format to 2547XXXXXXXX."""
-    
+
     phone = phone.strip().replace('+', '')
     if phone.startswith('0'):
         phone = '254' + phone[1:]
@@ -35,7 +35,27 @@ class RentInvoiceViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return RentInvoice.objects.all()
+        user = self.request.user
+
+        if user.role == 'admin':
+            return RentInvoice.objects.all()
+
+        if user.role == 'landlord':
+            try:
+                landlord_profile = user.landlord_profile
+                return RentInvoice.objects.filter(
+                    lease__unit__property__landlord=landlord_profile
+                )
+            except Exception:
+                return RentInvoice.objects.none()
+
+        if user.role == 'tenant':
+            try:
+                return RentInvoice.objects.filter(lease__tenant=user.tenant_profile)
+            except Exception:
+                return RentInvoice.objects.none()
+
+        return RentInvoice.objects.none()
 
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -48,7 +68,27 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return Payment.objects.all()
+        user = self.request.user
+
+        if user.role == 'admin':
+            return Payment.objects.all()
+
+        if user.role == 'landlord':
+            try:
+                landlord_profile = user.landlord_profile
+                return Payment.objects.filter(
+                    invoice__lease__unit__property__landlord=landlord_profile
+                )
+            except Exception:
+                return Payment.objects.none()
+
+        if user.role == 'tenant':
+            try:
+                return Payment.objects.filter(invoice__lease__tenant=user.tenant_profile)
+            except Exception:
+                return Payment.objects.none()
+
+        return Payment.objects.none()
 
 
 class MpesaSTKPushView(APIView):
@@ -56,7 +96,7 @@ class MpesaSTKPushView(APIView):
     permission_classes = []
 
     def post(self, request):
-        # Get and normalize phone number 
+        # Get and normalize phone number
         phone = format_phone(request.data.get('phone_number', ''))
         amount = request.data.get('amount')
         invoice_id = request.data.get('invoice_id')
@@ -91,7 +131,6 @@ class MpesaSTKPushView(APIView):
         )
 
         # Save a pending record we can update when the callback arrives
-        #  MpesaTransaction.objects.create() logic
         if response.get('ResponseCode') == '0':
             # Create internal payment record
             payment = Payment.objects.create(
@@ -125,8 +164,7 @@ class MpesaSTKPushView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class MpesaCallbackView(APIView):
-    """Receive the payment result from Daraja.
-    Logic taken directly from teacher's mpesa_callback() view."""
+    """Receive the payment result from Daraja."""
     permission_classes = []
 
     def post(self, request):

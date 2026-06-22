@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.response import Response
+from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Property, Unit
@@ -15,34 +17,22 @@ class IsLandlordOrAdmin(permissions.BasePermission):
         # Write access only for landlords and admins
         return request.user.is_authenticated and request.user.role in ['landlord', 'admin']
 
-    #def has_object_permission(self, request, view, obj):
-    #     # Allow read access to all authenticated users
-    #     if request.method in permissions.SAFE_METHODS:
-    #         return request.user.is_authenticated
-    #     # Admins can edit any property
-    #     if request.user.role == 'admin':
-    #         return True
-    #     # Landlords can only edit their own properties
-    #     if request.user.role == 'landlord':
-    #         return obj.landlord.user == request.user
-    #     return False
-
     def has_object_permission(self, request, view, obj):
-         # Allow read access to all authenticated users
-          if request.method in permissions.SAFE_METHODS:
+        # Allow read access to all authenticated users
+        if request.method in permissions.SAFE_METHODS:
             return request.user.is_authenticated
         # Admins can edit any property or unit
-          if request.user.role == 'admin':
+        if request.user.role == 'admin':
             return True
         # Landlords can only edit things tied to their own properties
-          if request.user.role == 'landlord':
-        # obj is a Property — it has .landlord directly
-           if hasattr(obj, 'landlord'):
-              return obj.landlord.user == request.user
-        # obj is a Unit — reach the landlord through its parent property
-          if hasattr(obj, 'property'):
-            return obj.property.landlord.user == request.user
-          return False
+        if request.user.role == 'landlord':
+            # obj is a Property — it has .landlord directly
+            if hasattr(obj, 'landlord'):
+                return obj.landlord.user == request.user
+            # obj is a Unit — reach the landlord through its parent property
+            if hasattr(obj, 'property'):
+                return obj.property.landlord.user == request.user
+        return False
 
 
 class PropertyViewSet(viewsets.ModelViewSet):
@@ -125,3 +115,12 @@ class UnitViewSet(viewsets.ModelViewSet):
         instance.delete()
         property_instance.total_units = property_instance.units.count()
         property_instance.save()
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'Cannot delete this unit because it has an active lease attached. Terminate the lease first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

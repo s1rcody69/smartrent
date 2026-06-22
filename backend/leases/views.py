@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.response import Response
+from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Lease
 from .serializers import LeaseSerializer
@@ -52,3 +54,12 @@ class LeaseViewSet(viewsets.ModelViewSet):
                 return Lease.objects.none()
 
         return Lease.objects.none()
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {'error': 'Cannot delete this lease because it has invoices attached. Mark it terminated instead.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
