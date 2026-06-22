@@ -48,10 +48,10 @@ class UserAdmin(BaseUserAdmin):
 class LandlordProfileAdmin(admin.ModelAdmin):
 
     # Columns visible in the landlord profile list view
-    list_display = ['user', 'business_name', 'created_at']
+    list_display = ['user', 'created_at']
 
     # Fields the search bar will query against
-    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'business_name']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name']
 
     # These fields cannot be edited through the admin panel
     readonly_fields = ['created_at', 'updated_at']
@@ -60,10 +60,10 @@ class LandlordProfileAdmin(admin.ModelAdmin):
 class TenantProfileAdmin(admin.ModelAdmin):
 
     # Columns visible in the tenant profile list view
-    list_display = ['user', 'national_id', 'occupation', 'employment_status', 'created_at']
+    list_display = ['user', 'national_id', 'occupation', 'created_at']
 
     # Sidebar filters
-    list_filter = ['employment_status']
+    list_filter = ['occupation']
 
     # Fields the search bar will query against
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'national_id']

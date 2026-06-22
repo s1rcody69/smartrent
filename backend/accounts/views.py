@@ -6,7 +6,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 
-from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from .serializers import (
+    RegisterSerializer,
+    LoginSerializer,
+    UserSerializer,
+    LandlordProfileSerializer,
+    TenantProfileSerializer,
+)
+from .models import LandlordProfile, TenantProfile
 
 # Always use get_user_model() to reference the custom user model
 User = get_user_model()
@@ -120,3 +127,63 @@ class MeView(APIView):
         # request.user is automatically set by JWT authentication middleware
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LandlordProfileView(APIView):
+    # Landlord views/updates their own profile only
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            profile = request.user.landlord_profile
+        except LandlordProfile.DoesNotExist:
+            return Response(
+                {'error': 'Landlord profile not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = LandlordProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        try:
+            profile = request.user.landlord_profile
+        except LandlordProfile.DoesNotExist:
+            return Response(
+                {'error': 'Landlord profile not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = LandlordProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TenantProfileView(APIView):
+    # Tenant views/updates their own profile only
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            profile = request.user.tenant_profile
+        except TenantProfile.DoesNotExist:
+            return Response(
+                {'error': 'Tenant profile not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = TenantProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        try:
+            profile = request.user.tenant_profile
+        except TenantProfile.DoesNotExist:
+            return Response(
+                {'error': 'Tenant profile not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = TenantProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

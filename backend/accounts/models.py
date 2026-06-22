@@ -127,10 +127,6 @@ class LandlordProfile(models.Model):
         related_name='landlord_profile'
     )
 
-    # Business details specific to landlords
-    business_name = models.CharField(max_length=255, blank=True, null=True)
-    business_registration_number = models.CharField(max_length=100, blank=True, null=True)
-
     # Cloudinary will store the URL of the uploaded profile photo
     profile_photo = models.ImageField(
         upload_to='landlord_photos/',
@@ -150,15 +146,6 @@ class LandlordProfile(models.Model):
 
 
 class TenantProfile(models.Model):
-    # Choices for employment status
-    EMPLOYMENT_STATUS_CHOICES = (
-        ('employed', 'Employed'),
-        ('self_employed', 'Self Employed'),
-        ('student', 'Student'),
-        ('unemployed', 'Unemployed'),
-        ('retired', 'Retired'),
-    )
-
     # One-to-one link to User — one user can have one tenant profile
     user = models.OneToOneField(
         User,
@@ -175,16 +162,7 @@ class TenantProfile(models.Model):
         null=True
     )
 
-    # Occupation details — important for tenant vetting in Kenya
     occupation = models.CharField(max_length=255, blank=True, null=True)
-    employer_name = models.CharField(max_length=255, blank=True, null=True)
-    employment_status = models.CharField(
-        max_length=20,
-        choices=EMPLOYMENT_STATUS_CHOICES,
-        blank=True,
-        null=True
-    )
-    
 
     # Emergency contact — standard requirement for rental agreements in Kenya
     emergency_contact_name = models.CharField(max_length=100, blank=True, null=True)
@@ -199,4 +177,3 @@ class TenantProfile(models.Model):
 
     def __str__(self):
         return f'TenantProfile — {self.user.full_name}'
-    

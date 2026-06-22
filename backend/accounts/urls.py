@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterView, LoginView, LogoutView, MeView
+from .views import RegisterView, LoginView, LogoutView, MeView, LandlordProfileView, TenantProfileView
 
 # All URLs here are prefixed with /api/auth/ — set in the root urls.py
 urlpatterns = [
@@ -18,4 +18,10 @@ urlpatterns = [
 
     # Current user profile endpoint
     path('me/', MeView.as_view(), name='auth-me'),
+
+    # Landlord views/updates their own profile
+    path('landlord/profile/', LandlordProfileView.as_view(), name='landlord-profile'),
+
+    # Tenant views/updates their own profile
+    path('tenant/profile/', TenantProfileView.as_view(), name='tenant-profile'),
 ]

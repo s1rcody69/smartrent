@@ -31,7 +31,29 @@ class RegisterSerializer(serializers.ModelSerializer):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError('A user with this email already exists.')
         return value
+    
+    def validate_phone_number(self, value):
+        if not value:
+          return value
 
+    # Normalize common formats to 2547XXXXXXXX before validating
+        cleaned = value.strip().replace(' ', '').replace('-', '')
+
+        if cleaned.startswith('+'):
+          cleaned = cleaned[1:]
+        if cleaned.startswith('0'):
+          cleaned = '254' + cleaned[1:]
+        elif cleaned.startswith('7') or cleaned.startswith('1'):
+          cleaned = '254' + cleaned
+
+    # A valid Kenyan mobile number is 254 followed by 9 digits, always 12 digits total
+        if not cleaned.isdigit() or len(cleaned) != 12 or not cleaned.startswith('254'):
+          raise serializers.ValidationError(
+            'Enter a valid Kenyan phone number, e.g. 0712345678 or 254712345678.'
+        )
+
+        return cleaned
+ 
     def validate(self, data):
         # Cross-field validation — compare password and confirm_password
         if data['password'] != data['confirm_password']:
@@ -81,4 +103,85 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         # These fields can never be changed through the API
         read_only_fields = ['id', 'date_joined', 'is_verified']
+
+
+class LandlordProfileSerializer(serializers.ModelSerializer):
+    # Read-only convenience fields pulled from the related User
+    full_name = serializers.CharField(source='user.full_name', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+
+    class Meta:
+        model = LandlordProfile
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'phone_number',
+            'profile_photo',
+            'bio',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TenantProfileSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.full_name', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    phone_number = serializers.CharField(source='user.phone_number', read_only=True)
+    employment_status_display = None  # removed field — no longer applicable
+
+    class Meta:
+        model = TenantProfile
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'phone_number',
+            'national_id',
+            'profile_photo',
+            'occupation',
+            'emergency_contact_name',
+            'emergency_contact_phone',
+            'emergency_contact_relationship',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_national_id(self, value):
+        if not value:
+            return value
+
+        cleaned = value.strip()
+
+        # Kenyan national IDs are numeric only, typically 7-8 digits
+        if not cleaned.isdigit():
+            raise serializers.ValidationError('National ID must contain numbers only.')
+
+        if len(cleaned) not in (7, 8):
+            raise serializers.ValidationError('National ID must be 7 or 8 digits long.')
+
+        return cleaned
+
+    def validate_emergency_contact_phone(self, value):
+        if not value:
+            return value
+
+        cleaned = value.strip().replace(' ', '').replace('-', '')
+
+        if cleaned.startswith('+'):
+            cleaned = cleaned[1:]
+        if cleaned.startswith('0'):
+            cleaned = '254' + cleaned[1:]
+        elif cleaned.startswith('7') or cleaned.startswith('1'):
+            cleaned = '254' + cleaned
+
+        if not cleaned.isdigit() or len(cleaned) != 12 or not cleaned.startswith('254'):
+            raise serializers.ValidationError(
+                'Enter a valid Kenyan phone number, e.g. 0712345678 or 254712345678.'
+            )
+
+        return cleaned
     
