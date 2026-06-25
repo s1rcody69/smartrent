@@ -6,7 +6,7 @@ A full-stack property management and rent collection system for landlords and te
 
 SmartRent is built around the idea of a **centralized platform for property management** that replaces the spreadsheets, paper records, and WhatsApp messages most Kenyan landlords currently rely on. Instead of managing properties, tenants, rent, and maintenance across fragmented channels, landlords and tenants interact through one secure, role-based system.
 
-The backend is a **Django REST Framework API** with JWT authentication, role-based access control across three user types (Admin, Landlord, Tenant), and a real **Safaricom M-Pesa STK Push** payment flow — all backed by PostgreSQL and deployed live on Render.
+The backend is a **Django REST Framework API** with JWT authentication, role-based access control across three user types (Adminr, Landlord, Tenant), and a real **Safaricom M-Pesa STK Push** payment flow — all backed by PostgreSQL and deployed live on Render.
 
 ## Features
 
