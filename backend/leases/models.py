@@ -23,7 +23,7 @@ class Lease(models.Model):
 
     unit = models.ForeignKey(
         Unit,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='leases'
     )
 
