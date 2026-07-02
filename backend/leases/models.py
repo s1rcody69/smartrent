@@ -1,7 +1,10 @@
 import uuid
 from django.db import models
+from django.contrib.auth import get_user_model
 from accounts.models import TenantProfile
 from properties.models import Unit
+
+User = get_user_model()
 
 
 class Lease(models.Model):
@@ -94,3 +97,85 @@ class Lease(models.Model):
                 # No other active leases — mark unit as vacant
                 self.unit.status = 'vacant'
                 self.unit.save()
+
+
+class LeaseTerminationRequest(models.Model):
+
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # The lease this termination request is against
+    lease = models.ForeignKey(
+        Lease,
+        on_delete=models.CASCADE,
+        related_name='termination_requests'
+    )
+
+    # The tenant user who submitted the request
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='termination_requests_made'
+    )
+
+    # Why the tenant wants to leave early
+    reason = models.TextField()
+
+    # The date the tenant wants to vacate
+    requested_vacate_date = models.DateField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
+    # Deposit is always non-refundable on early termination
+    # This flag is set to True automatically on creation and cannot be changed
+    deposit_forfeited = models.BooleanField(default=True)
+
+    # Auto-generated system note about deposit forfeiture
+    # Visible to the tenant so they are fully aware before submitting
+    deposit_note = models.TextField(blank=True)
+
+    # Who reviewed this request — landlord or admin
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='termination_requests_reviewed'
+    )
+
+    # When the review happened
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    # Optional note from the landlord/admin when approving or rejecting
+    review_note = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'lease_termination_requests'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'TerminationRequest — {self.lease} — {self.status}'
+
+    def save(self, *args, **kwargs):
+        # Auto-generate the deposit forfeiture note on first creation
+        if not self.pk and not self.deposit_note:
+            amount = self.lease.deposit_amount
+            self.deposit_note = (
+                f"Your security deposit of KES {amount:,.2f} is non-refundable "
+                f"as this lease is being terminated early at your request. "
+                f"Any outstanding rent invoices must be settled before this "
+                f"request can be approved."
+            )
+        super().save(*args, **kwargs)

@@ -11,16 +11,16 @@ from accounts.models import LandlordProfile
 class IsLandlordOrAdmin(permissions.BasePermission):
     # Custom permission — only landlords and admins can create/edit properties
     def has_permission(self, request, view):
-        # Allow read access to all authenticated users
+        # Allow read access to anyone — authenticated or not
         if request.method in permissions.SAFE_METHODS:
-            return request.user.is_authenticated
+            return True
         # Write access only for landlords and admins
         return request.user.is_authenticated and request.user.role in ['landlord', 'admin']
 
     def has_object_permission(self, request, view, obj):
-        # Allow read access to all authenticated users
+        # Allow read access to anyone — authenticated or not
         if request.method in permissions.SAFE_METHODS:
-            return request.user.is_authenticated
+            return True
         # Admins can edit any property or unit
         if request.user.role == 'admin':
             return True
@@ -46,6 +46,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        # Unauthenticated users — public landing page, show active properties only
+        if not user.is_authenticated:
+            return Property.objects.filter(is_active=True)
+
         # Admins can see all properties
         if user.role == 'admin':
             return Property.objects.all()
@@ -58,7 +62,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             except LandlordProfile.DoesNotExist:
                 return Property.objects.none()
 
-        # Tenants can only see active properties
+        # Tenants and any other authenticated users see active properties
         return Property.objects.filter(is_active=True)
 
     def get_serializer_class(self):
@@ -89,6 +93,10 @@ class UnitViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        # Unauthenticated users — show all units so property detail pages work
+        if not user.is_authenticated:
+            return Unit.objects.filter(property__is_active=True)
+
         # Admins can see all units
         if user.role == 'admin':
             return Unit.objects.all()
@@ -101,8 +109,8 @@ class UnitViewSet(viewsets.ModelViewSet):
             except LandlordProfile.DoesNotExist:
                 return Unit.objects.none()
 
-        # Tenants can only see vacant units
-        return Unit.objects.filter(status='vacant')
+        # Tenants and authenticated users see units in active properties
+        return Unit.objects.filter(property__is_active=True)
 
     def perform_create(self, serializer):
         unit = serializer.save()
