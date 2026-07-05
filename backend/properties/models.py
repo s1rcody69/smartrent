@@ -39,9 +39,9 @@ class Property(models.Model):
     city = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
-    # Cloudinary will store the URL of the uploaded cover image
-    cover_image = models.ImageField(
-        upload_to='property_images/',
+    # Store the Cloudinary URL as a text field
+    cover_image = models.URLField(
+        max_length=500,
         blank=True,
         null=True
     )
