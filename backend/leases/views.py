@@ -65,6 +65,21 @@ class LeaseViewSet(viewsets.ModelViewSet):
 
         return Lease.objects.none()
 
+    def perform_create(self, serializer):
+        user = self.request.user
+        
+        # If user is a tenant, auto-set the tenant field
+        if user.role == 'tenant':
+            try:
+                tenant_profile = user.tenant_profile
+                serializer.save(tenant=tenant_profile)
+            except Exception:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError('Tenant profile not found.')
+        else:
+            # Landlord/admin creating lease - they must provide tenant
+            serializer.save()
+
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
