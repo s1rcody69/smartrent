@@ -10,6 +10,7 @@ User = get_user_model()
 class Lease(models.Model):
 
     STATUS_CHOICES = (
+        ('pending', 'Pending'),      #  ADDED: Tenant applied, waiting for landlord
         ('active', 'Active'),
         ('expired', 'Expired'),
         ('terminated', 'Terminated'),
@@ -49,7 +50,7 @@ class Lease(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='active'
+        default='pending'  # CHANGED: Default is now 'pending' instead of 'active'
     )
 
     # Additional terms or notes for this specific lease
@@ -97,6 +98,8 @@ class Lease(models.Model):
                 # No other active leases — mark unit as vacant
                 self.unit.status = 'vacant'
                 self.unit.save()
+        # 👈 ADDED: 'pending' status does NOT change unit status
+        # Unit remains vacant until the lease becomes active
 
 
 class LeaseTerminationRequest(models.Model):

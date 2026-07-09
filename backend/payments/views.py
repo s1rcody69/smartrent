@@ -207,6 +207,12 @@ class MpesaCallbackView(APIView):
                 invoice.paid_date = timezone.now().date()
                 invoice.save()
 
+                # 👇 NEW: Update lease status from pending to active
+                lease = invoice.lease
+                if lease.status == 'pending':
+                    lease.status = 'active'
+                    lease.save()
+
         else:
             # Non-zero code means cancelled, timed out, or failed
             transaction.status = 'Failed'
