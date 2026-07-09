@@ -10,7 +10,7 @@ User = get_user_model()
 class Lease(models.Model):
 
     STATUS_CHOICES = (
-        ('pending', 'Pending'),      #  ADDED: Tenant applied, waiting for landlord
+        ('pending', 'Pending'),      # 👈 ADDED
         ('active', 'Active'),
         ('expired', 'Expired'),
         ('terminated', 'Terminated'),
@@ -50,7 +50,7 @@ class Lease(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='pending'  # CHANGED: Default is now 'pending' instead of 'active'
+        default='pending'  # 👈 CHANGED from 'active' to 'pending'
     )
 
     # Additional terms or notes for this specific lease

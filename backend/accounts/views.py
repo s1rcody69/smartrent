@@ -189,8 +189,8 @@ class TenantProfileView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TenantListView(APIView):
-    """List all tenants — only accessible to landlords and admins."""
+class AvailableTenantsListView(APIView):
+    """List all tenants without active leases — only accessible to landlords and admins."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -203,5 +203,14 @@ class TenantListView(APIView):
 
         # Get all tenant profiles with user details
         tenants = TenantProfile.objects.select_related('user').all()
-        serializer = TenantProfileSerializer(tenants, many=True)
+        
+        # Filter out tenants with active leases
+        from leases.models import Lease
+        tenant_ids_with_active_leases = Lease.objects.filter(
+            status='active'
+        ).values_list('tenant_id', flat=True)
+        
+        available_tenants = tenants.exclude(id__in=tenant_ids_with_active_leases)
+        
+        serializer = TenantProfileSerializer(available_tenants, many=True)
         return Response(serializer.data)

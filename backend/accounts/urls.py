@@ -6,7 +6,7 @@ from .views import (
     MeView,
     LandlordProfileView,
     TenantProfileView,
-    TenantListView,
+    AvailableTenantsListView,  # 👈 New import
 )
 
 urlpatterns = [
@@ -16,5 +16,5 @@ urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
     path('landlord/profile/', LandlordProfileView.as_view(), name='landlord-profile'),
     path('tenant/profile/', TenantProfileView.as_view(), name='tenant-profile'),
-    path('tenants/', TenantListView.as_view(), name='tenant-list'),
+    path('available-tenants/', AvailableTenantsListView.as_view(), name='available-tenants'),  # 👈 New URL
 ]

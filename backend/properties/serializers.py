@@ -85,6 +85,9 @@ class PropertyListSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    
+    vacant_units = serializers.SerializerMethodField()
+
     class Meta:
         model = Property
         fields = [
@@ -98,7 +101,12 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'city',
             'cover_image',
             'total_units',
+            'vacant_units',  
             'is_active',
             'created_at',
         ]
         read_only_fields = ['id', 'landlord', 'total_units', 'created_at']
+
+    def get_vacant_units(self, obj):
+        """Return the number of vacant units for this property."""
+        return obj.units.filter(status='vacant').count()

@@ -66,6 +66,10 @@ class LeaseViewSet(viewsets.ModelViewSet):
         return Lease.objects.none()
 
     def perform_create(self, serializer):
+        """
+        Auto-set tenant for tenant users.
+        Landlords/admins must provide tenant manually.
+        """
         user = self.request.user
         
         # If user is a tenant, auto-set the tenant field
