@@ -187,3 +187,21 @@ class TenantProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TenantListView(APIView):
+    """List all tenants — only accessible to landlords and admins."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Only landlords and admins can see the tenant list
+        if request.user.role not in ['landlord', 'admin']:
+            return Response(
+                {'error': 'You do not have permission to view tenants.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get all tenant profiles with user details
+        tenants = TenantProfile.objects.select_related('user').all()
+        serializer = TenantProfileSerializer(tenants, many=True)
+        return Response(serializer.data)
