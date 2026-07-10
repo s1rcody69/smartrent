@@ -252,3 +252,21 @@ class AvailableTenantsListView(APIView):
         
         serializer = TenantProfileSerializer(available_tenants, many=True)
         return Response(serializer.data)
+
+
+class AdminUsersListView(APIView):
+    """List all platform users — only accessible to admins."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Only admins can see all users
+        if request.user.role != 'admin':
+            return Response(
+                {'error': 'You do not have permission to view all users.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get all users ordered by most recent first
+        users = User.objects.all().order_by('-date_joined')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
