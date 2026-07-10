@@ -29,8 +29,13 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 CSRF_TRUSTED_ORIGINS = ['https://smartrent-l1c0.onrender.com']
 
-ALLOWED_HOSTS = ['smartrent-l1c0.onrender.com', 'localhost', '127.0.0.1']
-# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost').split(',')
+# ALLOWED_HOSTS = ['smartrent-l1c0.onrender.com', 'localhost', '127.0.0.1', 'concerned-purist-replace.ngrok-free.dev',]
+ALLOWED_HOSTS = [
+    'smartrent-l1c0.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    'concerned-purist-replace.ngrok-free.dev',
+]
 
 
 # Application definition
@@ -243,6 +248,5 @@ MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
 MPESA_SHORTCODE = config('MPESA_SHORTCODE')
 MPESA_PASSKEY = config('MPESA_PASSKEY')
 MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL')
-
 
 

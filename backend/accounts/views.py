@@ -147,15 +147,34 @@ class LandlordProfileView(APIView):
     def patch(self, request):
         try:
             profile = request.user.landlord_profile
+            user = request.user
         except LandlordProfile.DoesNotExist:
             return Response(
                 {'error': 'Landlord profile not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+        # Update User fields if provided
+        user_data = {}
+        if 'first_name' in request.data:
+            user_data['first_name'] = request.data.pop('first_name')
+        if 'last_name' in request.data:
+            user_data['last_name'] = request.data.pop('last_name')
+        if 'phone_number' in request.data:
+            user_data['phone_number'] = request.data.pop('phone_number')
+        
+        if user_data:
+            user_serializer = UserSerializer(user, data=user_data, partial=True)
+            if user_serializer.is_valid():
+                user_serializer.save()
+        
+        # Update profile fields
         serializer = LandlordProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            # Refresh user data
+            profile.refresh_from_db()
+            return Response(LandlordProfileSerializer(profile).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -177,15 +196,34 @@ class TenantProfileView(APIView):
     def patch(self, request):
         try:
             profile = request.user.tenant_profile
+            user = request.user
         except TenantProfile.DoesNotExist:
             return Response(
                 {'error': 'Tenant profile not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        
+        # Update User fields if provided
+        user_data = {}
+        if 'first_name' in request.data:
+            user_data['first_name'] = request.data.pop('first_name')
+        if 'last_name' in request.data:
+            user_data['last_name'] = request.data.pop('last_name')
+        if 'phone_number' in request.data:
+            user_data['phone_number'] = request.data.pop('phone_number')
+        
+        if user_data:
+            user_serializer = UserSerializer(user, data=user_data, partial=True)
+            if user_serializer.is_valid():
+                user_serializer.save()
+        
+        # Update profile fields
         serializer = TenantProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            # Refresh user data
+            profile.refresh_from_db()
+            return Response(TenantProfileSerializer(profile).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

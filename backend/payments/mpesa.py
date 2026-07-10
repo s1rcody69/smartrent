@@ -39,7 +39,7 @@ def initiate_stk_push(phone_number, amount, account_reference="Payment"):
         "Password": password,
         "Timestamp": timestamp,
         "TransactionType": "CustomerPayBillOnline",
-        "Amount": int(amount),          # whole numbers only, no decimals
+        "Amount": int(float(amount)),   # 👈 FIXED: convert to float first
         "PartyA": phone_number,         # customer's number, 2547XXXXXXXX
         "PartyB": shortcode,            # your shortcode receiving funds
         "PhoneNumber": phone_number,    # number to receive the prompt

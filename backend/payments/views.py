@@ -168,59 +168,103 @@ class MpesaCallbackView(APIView):
     permission_classes = []
 
     def post(self, request):
+        print("\n" + "="*60)
+        print("🔔 M-PESA CALLBACK RECEIVED")
+        print("="*60)
+        
+        # Handle both JSON and string data
+        if isinstance(request.data, str):
+            try:
+                data = json.loads(request.data)
+                print("📝 Data was parsed from string to JSON")
+            except:
+                data = request.data
+                print("⚠️ Data is a string but couldn't parse as JSON")
+        else:
+            data = request.data
+            print("📝 Data is already parsed JSON")
+            
+        print(f"\n📦 Full data received:")
+        print(json.dumps(data, indent=2, default=str))
+        print("\n" + "="*60)
+
         # Parse the callback data from Safaricom
-        data = request.data
         callback = data.get('Body', {}).get('stkCallback', {})
         checkout_id = callback.get('CheckoutRequestID')
         result_code = callback.get('ResultCode')
+        
+        print(f"\n🔑 Checkout Request ID: {checkout_id}")
+        print(f"📊 Result Code: {result_code}")
+        print(f"📝 Result Description: {callback.get('ResultDesc', 'N/A')}")
 
         # Find the matching transaction
         try:
             transaction = MpesaTransaction.objects.get(
                 checkout_request_id=checkout_id
             )
+            print(f"\n✅ Transaction found in database: {transaction.id}")
+            print(f"   - Payment: {transaction.payment.id if transaction.payment else 'None'}")
+            print(f"   - Current status: {transaction.status}")
         except MpesaTransaction.DoesNotExist:
+            print("\n❌ Transaction NOT found in database!")
+            print("   Checkout ID:", checkout_id)
             # Always acknowledge even if we cannot find the transaction
             return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
 
         if result_code == 0:
             # Payment succeeded — pull the receipt from the metadata
+            print("\n💰 Payment successful!")
             items = callback.get('CallbackMetadata', {}).get('Item', [])
+            print(f"📋 Metadata items: {items}")
+            
             receipt = next(
                 (i['Value'] for i in items if i['Name'] == 'MpesaReceiptNumber'),
                 '',
             )
+            print(f"🧾 M-Pesa Receipt Number: {receipt}")
 
             transaction.mpesa_receipt = receipt
             transaction.status = 'Completed'
             transaction.save()
+            print("✅ Transaction saved as Completed")
 
             # Update the linked payment record
             if transaction.payment:
                 transaction.payment.status = 'completed'
                 transaction.payment.transaction_code = receipt
                 transaction.payment.save()
+                print(f"✅ Payment {transaction.payment.id} updated to completed")
 
                 # Mark the invoice as paid
                 invoice = transaction.payment.invoice
                 invoice.status = 'paid'
                 invoice.paid_date = timezone.now().date()
                 invoice.save()
+                print(f"✅ Invoice {invoice.id} marked as paid")
 
-                # 👇 NEW: Update lease status from pending to active
+                # Update lease status from pending to active
                 lease = invoice.lease
                 if lease.status == 'pending':
                     lease.status = 'active'
                     lease.save()
+                    print(f"✅ Lease {lease.id} changed from pending to active")
+                else:
+                    print(f"ℹ️ Lease {lease.id} status is {lease.status}, not pending")
 
         else:
             # Non-zero code means cancelled, timed out, or failed
+            print(f"\n❌ Payment failed with result code: {result_code}")
             transaction.status = 'Failed'
             transaction.save()
 
             if transaction.payment:
                 transaction.payment.status = 'failed'
                 transaction.payment.save()
+                print(f"❌ Payment {transaction.payment.id} marked as failed")
+
+        print("\n" + "="*60)
+        print("✅ CALLBACK PROCESSING COMPLETE - Returning acknowledgment")
+        print("="*60 + "\n")
 
         # Always acknowledge receipt so Daraja stops retrying
         return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
