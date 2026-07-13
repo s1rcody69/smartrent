@@ -36,6 +36,12 @@ class LeaseSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # 👇 ADDED: Landlord name for display
+    landlord_name = serializers.CharField(
+        source='unit.property.landlord.user.full_name',
+        read_only=True
+    )
+
     class Meta:
         model = Lease
         fields = [
@@ -46,6 +52,7 @@ class LeaseSerializer(serializers.ModelSerializer):
             'unit',
             'unit_number',
             'property_name',
+            'landlord_name',  
             'rent_amount',
             'deposit_amount',
             'start_date',
@@ -58,7 +65,7 @@ class LeaseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {
-            'tenant': {'required': False},  # 👈 ADD THIS - makes tenant optional for tenant applications
+            'tenant': {'required': False},
         }
 
     def validate(self, data):
