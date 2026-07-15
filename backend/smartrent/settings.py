@@ -236,6 +236,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",   
     "https://smartrent-l1c0.onrender.com",
+    "https://smartrent-frontend-seven.vercel.app", 
 
 
 ]
