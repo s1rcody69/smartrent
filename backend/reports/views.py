@@ -10,6 +10,7 @@ from payments.models import Payment, RentInvoice
 from properties.models import Property, Unit
 from leases.models import Lease
 from maintenance.models import MaintenanceRequest
+from accounts.models import LandlordProfile
 
 
 class IsAdminOrLandlord(permissions.BasePermission):
@@ -24,25 +25,40 @@ class RevenueReportView(APIView):
     permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
+        user = request.user
+        
+        # Base queryset - filter by landlord if not admin
+        if user.role == 'admin':
+            payments = Payment.objects.filter(status='completed')
+            invoices = RentInvoice.objects.all()
+        else:
+            # Landlord: only see payments from their properties
+            try:
+                landlord_profile = user.landlord_profile
+                payments = Payment.objects.filter(
+                    status='completed',
+                    invoice__lease__unit__property__landlord=landlord_profile
+                )
+                invoices = RentInvoice.objects.filter(
+                    lease__unit__property__landlord=landlord_profile
+                )
+            except LandlordProfile.DoesNotExist:
+                payments = Payment.objects.none()
+                invoices = RentInvoice.objects.none()
+
         # Total revenue from completed payments only
-        total_revenue = Payment.objects.filter(
-            status='completed'
-        ).aggregate(
+        total_revenue = payments.aggregate(
             total=Sum('amount')
         )['total'] or 0
 
         # Monthly revenue breakdown
-        # TruncMonth groups payments by month
-        monthly_revenue = Payment.objects.filter(
-            status='completed'
-        ).annotate(
+        monthly_revenue = payments.annotate(
             month=TruncMonth('created_at')
         ).values('month').annotate(
             total=Sum('amount'),
             count=Count('id')
         ).order_by('-month')
 
-        # Format monthly data for frontend charts
         monthly_data = [
             {
                 'month': entry['month'].strftime('%B %Y'),
@@ -53,14 +69,14 @@ class RevenueReportView(APIView):
         ]
 
         # Outstanding balances — pending invoices
-        outstanding = RentInvoice.objects.filter(
+        outstanding = invoices.filter(
             status='pending'
         ).aggregate(
             total=Sum('amount')
         )['total'] or 0
 
         # Overdue invoices
-        overdue = RentInvoice.objects.filter(
+        overdue = invoices.filter(
             status='overdue'
         ).aggregate(
             total=Sum('amount')
@@ -79,27 +95,35 @@ class OccupancyReportView(APIView):
     permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
-        # Total units across all properties
-        total_units = Unit.objects.count()
+        user = request.user
 
-        # Occupied units
-        occupied_units = Unit.objects.filter(status='occupied').count()
+        # Base querysets - filter by landlord if not admin
+        if user.role == 'admin':
+            units = Unit.objects.all()
+            properties = Property.objects.filter(is_active=True)
+        else:
+            try:
+                landlord_profile = user.landlord_profile
+                units = Unit.objects.filter(property__landlord=landlord_profile)
+                properties = Property.objects.filter(
+                    landlord=landlord_profile,
+                    is_active=True
+                )
+            except LandlordProfile.DoesNotExist:
+                units = Unit.objects.none()
+                properties = Property.objects.none()
 
-        # Vacant units
-        vacant_units = Unit.objects.filter(status='vacant').count()
+        total_units = units.count()
+        occupied_units = units.filter(status='occupied').count()
+        vacant_units = units.filter(status='vacant').count()
+        maintenance_units = units.filter(status='maintenance').count()
 
-        # Units under maintenance
-        maintenance_units = Unit.objects.filter(status='maintenance').count()
-
-        # Occupancy rate as a percentage
         occupancy_rate = (
             (occupied_units / total_units * 100) if total_units > 0 else 0
         )
 
         # Per property breakdown
-        properties = Property.objects.filter(is_active=True)
         property_breakdown = []
-
         for prop in properties:
             prop_total = prop.units.count()
             prop_occupied = prop.units.filter(status='occupied').count()
@@ -130,20 +154,39 @@ class PaymentReportView(APIView):
     permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
+        user = request.user
+
+        # Base querysets - filter by landlord if not admin
+        if user.role == 'admin':
+            payments = Payment.objects.all()
+            invoices = RentInvoice.objects.all()
+        else:
+            try:
+                landlord_profile = user.landlord_profile
+                payments = Payment.objects.filter(
+                    invoice__lease__unit__property__landlord=landlord_profile
+                )
+                invoices = RentInvoice.objects.filter(
+                    lease__unit__property__landlord=landlord_profile
+                )
+            except LandlordProfile.DoesNotExist:
+                payments = Payment.objects.none()
+                invoices = RentInvoice.objects.none()
+
         # Payment counts by status
-        total_payments = Payment.objects.count()
-        completed_payments = Payment.objects.filter(status='completed').count()
-        failed_payments = Payment.objects.filter(status='failed').count()
-        pending_payments = Payment.objects.filter(status='pending').count()
+        total_payments = payments.count()
+        completed_payments = payments.filter(status='completed').count()
+        failed_payments = payments.filter(status='failed').count()
+        pending_payments = payments.filter(status='pending').count()
 
         # Invoice counts by status
-        total_invoices = RentInvoice.objects.count()
-        paid_invoices = RentInvoice.objects.filter(status='paid').count()
-        pending_invoices = RentInvoice.objects.filter(status='pending').count()
-        overdue_invoices = RentInvoice.objects.filter(status='overdue').count()
+        total_invoices = invoices.count()
+        paid_invoices = invoices.filter(status='paid').count()
+        pending_invoices = invoices.filter(status='pending').count()
+        overdue_invoices = invoices.filter(status='overdue').count()
 
         # Recent payments — last 10
-        recent_payments = Payment.objects.filter(
+        recent_payments = payments.filter(
             status='completed'
         ).order_by('-created_at')[:10].values(
             'id',
@@ -179,22 +222,36 @@ class MaintenanceReportView(APIView):
     permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
+        user = request.user
+
+        # Base queryset - filter by landlord if not admin
+        if user.role == 'admin':
+            requests = MaintenanceRequest.objects.all()
+        else:
+            try:
+                landlord_profile = user.landlord_profile
+                requests = MaintenanceRequest.objects.filter(
+                    unit__property__landlord=landlord_profile
+                )
+            except LandlordProfile.DoesNotExist:
+                requests = MaintenanceRequest.objects.none()
+
         # Counts by status
-        total = MaintenanceRequest.objects.count()
-        pending = MaintenanceRequest.objects.filter(status='pending').count()
-        assigned = MaintenanceRequest.objects.filter(status='assigned').count()
-        in_progress = MaintenanceRequest.objects.filter(status='in_progress').count()
-        completed = MaintenanceRequest.objects.filter(status='completed').count()
+        total = requests.count()
+        pending = requests.filter(status='pending').count()
+        assigned = requests.filter(status='assigned').count()
+        in_progress = requests.filter(status='in_progress').count()
+        completed = requests.filter(status='completed').count()
 
         # Counts by category
-        by_category = MaintenanceRequest.objects.values(
+        by_category = requests.values(
             'category'
         ).annotate(
             count=Count('id')
         ).order_by('-count')
 
         # Counts by priority
-        by_priority = MaintenanceRequest.objects.values(
+        by_priority = requests.values(
             'priority'
         ).annotate(
             count=Count('id')
@@ -218,31 +275,59 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAdminOrLandlord]
 
     def get(self, request):
-        # Properties and units
-        total_properties = Property.objects.filter(is_active=True).count()
-        total_units = Unit.objects.count()
-        occupied_units = Unit.objects.filter(status='occupied').count()
+        user = request.user
+
+        # Base querysets - filter by landlord if not admin
+        if user.role == 'admin':
+            properties = Property.objects.filter(is_active=True)
+            units = Unit.objects.all()
+            leases = Lease.objects.filter(status='active')
+            payments = Payment.objects.filter(status='completed')
+            maintenance = MaintenanceRequest.objects.filter(status='pending')
+            invoices = RentInvoice.objects.filter(status='pending')
+        else:
+            try:
+                landlord_profile = user.landlord_profile
+                properties = Property.objects.filter(
+                    landlord=landlord_profile,
+                    is_active=True
+                )
+                units = Unit.objects.filter(property__landlord=landlord_profile)
+                leases = Lease.objects.filter(
+                    status='active',
+                    unit__property__landlord=landlord_profile
+                )
+                payments = Payment.objects.filter(
+                    status='completed',
+                    invoice__lease__unit__property__landlord=landlord_profile
+                )
+                maintenance = MaintenanceRequest.objects.filter(
+                    status='pending',
+                    unit__property__landlord=landlord_profile
+                )
+                invoices = RentInvoice.objects.filter(
+                    status='pending',
+                    lease__unit__property__landlord=landlord_profile
+                )
+            except LandlordProfile.DoesNotExist:
+                properties = Property.objects.none()
+                units = Unit.objects.none()
+                leases = Lease.objects.none()
+                payments = Payment.objects.none()
+                maintenance = MaintenanceRequest.objects.none()
+                invoices = RentInvoice.objects.none()
+
+        total_properties = properties.count()
+        total_units = units.count()
+        occupied_units = units.filter(status='occupied').count()
         occupancy_rate = (
             (occupied_units / total_units * 100) if total_units > 0 else 0
         )
 
-        # Active leases
-        active_leases = Lease.objects.filter(status='active').count()
-
-        # Revenue
-        total_revenue = Payment.objects.filter(
-            status='completed'
-        ).aggregate(total=Sum('amount'))['total'] or 0
-
-        # Maintenance
-        pending_maintenance = MaintenanceRequest.objects.filter(
-            status='pending'
-        ).count()
-
-        # Pending invoices
-        pending_invoices = RentInvoice.objects.filter(
-            status='pending'
-        ).count()
+        active_leases = leases.count()
+        total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
+        pending_maintenance = maintenance.count()
+        pending_invoices = invoices.count()
 
         return Response({
             'total_properties': total_properties,
